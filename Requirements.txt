@@ -1,0 +1,10 @@
+This file lists all the dependencies needed for the application. Use npm install to install these packages automatically, or create a file named requirements.txt with the following content if you want a list format:
+
+express
+path
+mongoose
+body-parser
+bcrypt
+jsonwebtoken
+dotenv
+cors
