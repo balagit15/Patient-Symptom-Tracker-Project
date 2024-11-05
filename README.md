@@ -48,11 +48,16 @@ cd Patient-Symptom-Tracker-Project
 Install the necessary packages with:
 bash
 npm install
+npm init -y
+npm install express body-parser path
 
-3.3. Setup MongoDB
+3.3 Create Public folder
+Create folder named "public" and move the "index.html" to the "public" folder
+
+3.4. Setup MongoDB
 Make sure you have MongoDB installed locally or have access to a MongoDB cloud instance. Get your connection string ready for the next step.
 
-3.4. Configure Environment Variables
+3.5. Configure Environment Variables
 Create a .env file in the root directory and add the following environment variables:
 
 plaintext
@@ -61,7 +66,7 @@ DATABASE_URI=<Your MongoDB Connection String>
 JWT_SECRET=<Your JWT Secret Key>
 PORT=5500
 
-3.5. Start the Application
+3.6. Start the Application
 Run the application locally:
 
 bash:
