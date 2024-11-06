@@ -6,34 +6,21 @@
   <title>Patient Symptom Tracker</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
-    /* Basic Reset */
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; color: #333; background-color: #f4f4f9; }
-
-    /* Layout Styles */
     .container { display: grid; grid-template-columns: 1fr 3fr; max-width: 1200px; margin: 0 auto; padding: 20px; gap: 20px; }
     .sidebar { background: #1e293b; color: #fff; padding: 20px; border-radius: 8px; }
     .content { padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); }
-
-    /* Sidebar Navigation */
     .nav a { display: block; color: #cbd5e1; text-decoration: none; padding: 10px 15px; border-radius: 5px; margin-bottom: 10px; transition: background 0.3s; }
     .nav a:hover { background: #0f172a; }
-
-    /* Form Styles */
     form { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
     input, button { padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
     button { background: #2563eb; color: #fff; border: none; cursor: pointer; }
     button:hover { background: #1d4ed8; }
-    
-    /* Additional Widgets */
     .widget { margin-bottom: 20px; padding: 15px; border-radius: 8px; background: #eff6ff; color: #1e3a8a; }
     .widget-title { font-weight: bold; margin-bottom: 5px; }
     .error { color: red; }
-
-    /* Chart Styles */
     #symptomGraph { height: 400px; }
-
-    /* Responsive Styles */
     @media (max-width: 768px) {
       .container { grid-template-columns: 1fr; }
       .sidebar { margin-bottom: 20px; }
@@ -42,7 +29,6 @@
 </head>
 <body>
   <div class="container">
-    <!-- Sidebar with Navigation Links -->
     <aside class="sidebar">
       <h2>Patient Tracker</h2>
       <nav class="nav">
@@ -52,11 +38,8 @@
       </nav>
     </aside>
 
-    <!-- Main Content Area -->
     <div class="content">
       <h1>Patient Symptom Tracker</h1>
-
-      <!-- Real-time Stats Widgets -->
       <div class="widget">
         <p class="widget-title">Average Symptom Severity</p>
         <p id="avgSeverity">-</p>
@@ -66,26 +49,21 @@
         <p id="symptomCount">-</p>
       </div>
 
-      <!-- Log Symptoms Form -->
       <h3 id="symptom-form">Log Your Symptoms</h3>
       <form id="symptomForm">
         <label>Symptom:</label>
         <input type="text" id="symptom" placeholder="Enter your symptom..." required>
-
         <label>Severity (1-10):</label>
         <input type="number" id="severity" min="1" max="10" required>
-
         <button type="submit">Log Symptom</button>
       </form>
 
       <p id="recommendation" style="color: green; font-weight: bold;"></p>
       <p id="error" class="error"></p>
 
-      <!-- Symptom History Graph -->
       <h3 id="symptom-history">Symptom History</h3>
       <div id="symptomGraph"></div>
 
-      <!-- Health Tips Section -->
       <h3 id="health-tips">Health Tips</h3>
       <div id="healthTips">
         <p>Loading health tips...</p>
@@ -94,7 +72,6 @@
   </div>
 
   <script>
-    // Fetch and log symptoms
     document.getElementById('symptomForm').addEventListener('submit', function (event) {
       event.preventDefault();
 
@@ -112,7 +89,7 @@
       .then(data => {
         if (data.status === 'success') {
           document.getElementById('recommendation').innerText = `Recommendation: ${data.recommendation}`;
-          document.getElementById('error').innerText = '';  // Clear error
+          document.getElementById('error').innerText = '';
           loadSymptomHistory();
           loadStats();
         } else {
@@ -125,7 +102,6 @@
       });
     });
 
-    // Load symptom history and display the graph
     function loadSymptomHistory() {
       fetch('/get_symptom_history')
       .then(response => response.json())
@@ -153,7 +129,6 @@
       });
     }
 
-    // Load real-time statistics
     function loadStats() {
       fetch('/get_stats')
       .then(response => response.json())
@@ -166,13 +141,12 @@
       });
     }
 
-    // Load health tips from API
     function loadHealthTips() {
       fetch('/get_health_tips')
       .then(response => response.json())
       .then(data => {
         const tipsContainer = document.getElementById('healthTips');
-        tipsContainer.innerHTML = '';  // Clear any loading text
+        tipsContainer.innerHTML = '';
         data.tips.forEach(tip => {
           const tipItem = document.createElement('p');
           tipItem.innerText = `• ${tip}`;
@@ -184,7 +158,6 @@
       });
     }
 
-    // Load data on page load
     loadSymptomHistory();
     loadStats();
     loadHealthTips();
