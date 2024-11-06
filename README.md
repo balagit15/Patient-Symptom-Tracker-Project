@@ -47,8 +47,10 @@ cd Patient-Symptom-Tracker-Project
 Install the necessary packages with:
 bash
 npm install
-npm init -y
-npm install express body-parser path
+
+(must do:
+npm init -y ( After Cloning , run it in the project directory terminal)
+npm install express body-parser path )
 
 3.3 Create Public folder
 Create folder named "public" and move the "index.html" to the "public" folder
