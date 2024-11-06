@@ -1,130 +1,102 @@
 const express = require('express');
 const path = require('path');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const cors = require('cors'); // For handling CORS if required
-const app = express();
+const cors = require('cors');
 require('dotenv').config();
 
+const app = express();
 const PORT = process.env.PORT || 5500;
 
-// Connect to MongoDB
-mongoose.connect(process.env.DATABASE_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => console.log('Connected to MongoDB'))
-  .catch(err => console.error('Failed to connect to MongoDB', err));
-
-// Middleware
-app.use(cors()); // Allow cross-origin if needed for front-end
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Models
-const User = mongoose.model('User', new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  password: { type: String, required: true }
-}));
+// Connect to MongoDB
+mongoose.connect(process.env.DATABASE_URI || 'mongodb://localhost:27017/medical_terms', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log('Connected to MongoDB'))
+.catch(err => console.error('MongoDB connection error:', err));
 
-const SymptomLog = mongoose.model('SymptomLog', new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, required: true },
-  date: { type: String, required: true },
-  symptom: { type: String, required: true },
-  severity: { type: Number, required: true, min: 1, max: 10 }
-}));
+// Symptom schema and model
+const symptomSchema = new mongoose.Schema({
+  symptom: String,
+  severity: Number,
+  date: { type: Date, default: Date.now }
+});
+const Symptom = mongoose.model('Symptom', symptomSchema);
 
-// Register Route
-app.post('/register', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ username, password: hashedPassword });
-    await user.save();
-    res.json({ status: 'success', message: 'User registered successfully.' });
-  } catch (error) {
-    res.status(500).json({ status: 'error', message: 'User registration failed.' });
-  }
+// Route to get the index page (without login)
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html')); // Serve the index.html file
 });
 
-// Login Route
-app.post('/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    const user = await User.findOne({ username });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ status: 'error', message: 'Invalid credentials.' });
-    }
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    res.json({ status: 'success', token });
-  } catch (error) {
-    res.status(500).json({ status: 'error', message: 'Login failed.' });
-  }
-});
-
-// Middleware for Protected Routes
-const authenticate = (req, res, next) => {
-  const token = req.headers['authorization'];
-  if (!token) return res.status(401).json({ message: 'Authorization token missing.' });
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) return res.status(403).json({ message: 'Session expired. Please log in again.' });
-    req.userId = decoded.userId;
-    next();
-  });
-};
-
-// Protected route to log symptoms
-app.post('/log_symptom', authenticate, async (req, res) => {
+// Log Symptom (no authentication required now)
+app.post('/log_symptom', async (req, res) => {
   const { symptom, severity } = req.body;
 
-  // Validate input
-  if (!symptom || !severity || severity < 1 || severity > 10) {
-    return res.status(400).json({ status: 'error', message: 'Valid symptom and severity (1-10) required.' });
-  }
-
   try {
-    const date = new Date().toISOString().split('T')[0];
-    await SymptomLog.create({ userId: req.userId, date, symptom, severity: parseInt(severity, 10) });
+    // Save the symptom
+    const newSymptom = new Symptom({ symptom, severity });
+    await newSymptom.save();
 
-    // Determine health recommendation based on severity
-    let recommendation;
-    if (severity <= 3) {
-      recommendation = 'Symptoms mild. Stay hydrated and rest.';
-    } else if (severity <= 6) {
-      recommendation = 'Moderate symptoms. Consider consulting a healthcare professional.';
-    } else if (severity <= 8) {
-      recommendation = 'Severe symptoms. Seek advice from a healthcare provider.';
+    // Generate health recommendation (simplified)
+    let recommendation = '';
+    if (severity >= 8) {
+      recommendation = 'Please consult a doctor immediately.';
+    } else if (severity >= 5) {
+      recommendation = 'Consider visiting a healthcare professional if the symptom persists.';
     } else {
-      recommendation = 'Critical symptoms. Seek emergency medical attention immediately!';
+      recommendation = 'Monitor the symptom and seek medical advice if needed.';
     }
 
     res.json({ status: 'success', recommendation });
   } catch (error) {
-    res.status(500).json({ status: 'error', message: 'Failed to log symptom.' });
+    res.status(500).json({ status: 'error', message: 'Failed to log symptom', error });
   }
 });
 
-// Fetch user-specific symptom history
-app.get('/get_symptom_history', authenticate, async (req, res) => {
+// Get Symptom History (no authentication required)
+app.get('/get_symptom_history', async (req, res) => {
   try {
-    const symptomData = await SymptomLog.find({ userId: req.userId }).sort({ date: 1 });
-    const dates = symptomData.map(entry => entry.date);
-    const severities = symptomData.map(entry => entry.severity);
-
+    const symptoms = await Symptom.find().sort({ date: -1 }).limit(10);
+    const dates = symptoms.map(symptom => symptom.date.toISOString().split('T')[0]);
+    const severities = symptoms.map(symptom => symptom.severity);
+  
     res.json({ dates, severities });
   } catch (error) {
-    res.status(500).json({ status: 'error', message: 'Failed to fetch symptom history.' });
+    res.status(500).json({ status: 'error', message: 'Failed to retrieve symptom history' });
   }
 });
 
-// Home Route (optional)
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Get Stats (no authentication required)
+app.get('/get_stats', async (req, res) => {
+  try {
+    const symptoms = await Symptom.find();
+
+    const avgSeverity = symptoms.reduce((total, symptom) => total + symptom.severity, 0) / symptoms.length || 0;
+    const symptomCount = symptoms.length;
+
+    res.json({ avgSeverity, symptomCount });
+  } catch (error) {
+    res.status(500).json({ status: 'error', message: 'Failed to retrieve statistics' });
+  }
+});
+
+// Get Health Tips (static example)
+app.get('/get_health_tips', (req, res) => {
+  const tips = [
+    'Drink plenty of water to stay hydrated.',
+    'Get at least 7-8 hours of sleep every night.',
+    'Exercise regularly to maintain overall health.',
+    'If you feel unwell, consult a doctor as soon as possible.',
+    'Avoid smoking and excessive alcohol consumption.'
+  ];
+  res.json({ tips });
 });
 
 // Start Server
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
